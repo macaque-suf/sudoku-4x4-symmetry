@@ -92,12 +92,4 @@ struct Sudoku4x4(Copyable & Movable & Stringable):
           return False
 
     return True
-    
-  fn is_transpose_symmetric(self) -> Bool:
-    """Check if grid equals its transpose."""
-    for i in range(4):
-      for j in range(i + 1, 4):
-        if self.get(i, j) != self.get(j, i):
-          return False
-    return True
 

@@ -1,36 +1,8 @@
-from mod.count_occurange import count
-from mod.cycle_patterns import check_cyclic, check_standing
+from mod.count_occurance import count
 from mod.aggregates import hash_box, hash_sudoku
-from mod.holistic_symmetry import check_symmetry, Modulations
 
 fn main() raises:
-  var classes = count()
-  var tally = Dict[String, Int]()
-  var hashes = List[Int]()
-  for sudokus in classes.values():
+  var classes = count().values()
+  for sudokus in classes:
     var prime = sudokus[0]
-    var row_basis = (0,1)
-    var col_basis = (1,0)
     prime.print_grid()
-    var row = "C" if check_symmetry(prime, basis=row_basis, conjugate=Modulations.cyclic) else (
-        "S" if check_symmetry(prime, basis=row_basis, conjugate=Modulations.standing) else "X"
-    )
-    var col = "C" if check_symmetry(prime, basis=row_basis, conjugate=Modulations.cyclic) else (
-        "S" if check_symmetry(prime, basis=col_basis, conjugate=Modulations.standing) else "X"
-    )
-    var key = row + "," + col
-    print("Type: ", key)
-    print()
-    if key not in tally:
-      tally[key] = 0
-    tally[key] += 1
-    hashes.append(hash_sudoku(prime))
-
-  for key in tally:
-    print(key, ": ", tally[key])
-
-  print("All hashes: ", len(hashes))
-  for hash in hashes:
-    print(String(hash))
-
-

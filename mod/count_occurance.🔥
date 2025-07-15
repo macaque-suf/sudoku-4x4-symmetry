@@ -56,69 +56,6 @@ fn backtrack(mut grid: Sudoku4x4, row: Int, col: Int) -> Dict[String, Sudoku4x4]
 
   return results_dict
 
-fn transpose(grid: Sudoku4x4) -> Sudoku4x4:
-  """
-  Transposes a 4x4 Sudoku grid by reflecting it across the main diagonal.
-  
-  In mathematical terms, this swaps element at position (i,j) with element at (j,i).
-  This is one of the fundamental symmetry operations for Sudoku equivalence.
-  
-  Why this matters for Sudoku:
-  - A transposed valid Sudoku is still a valid Sudoku
-  - This helps identify equivalent puzzles that are just reflections of each other
-  - Combined with other transformations, helps find the canonical form
-  
-  Example:
-  Original:     Transposed:
-  1 2 3 4       1 * * *
-  * 1 4 3  -->  2 1 * *
-  * * 1 2       3 4 1 *
-  * * * 1       4 3 2 1
-  
-  Time complexity: O(16) = O(1) for 4x4 grids
-  """
-  var transposed = Sudoku4x4()
-  for i in range(4):
-    for j in range(4):
-      transposed.set(j,i,grid.get(i,j))
-
-  return transposed
-
-fn permute(grid: Sudoku4x4, rows: Bool) -> Sudoku4x4:
-  """
-  Applies a specific permutation to either rows or columns of the Sudoku grid.
-  
-  This function swaps pairs of rows/columns according to a fixed pattern:
-  - Rows/columns 0 and 2 are swapped
-  - Rows/columns 1 and 3 are swapped
-  
-  The mathematical operation: (i + 2) % 4 creates the mapping:
-  0 -> 2, 1 -> 3, 2 -> 0, 3 -> 1
-  
-  Why this specific permutation:
-  - In 4x4 Sudoku, rows/columns within the same "band" can be swapped
-  - This preserves the validity of the Sudoku
-  - This particular swap pattern is one of several valid permutations
-  
-  Parameters:
-  - grid: The input Sudoku grid
-  - rows: If True, permute rows; if False, permute columns
-  
-  Example (rows=True):
-  Original:     Permuted:
-  Row 0: 1234   Row 2: **12
-  Row 1: *1*3   Row 3: ****
-  Row 2: **12   Row 0: 1234
-  Row 3: ****   Row 1: *1*3
-  """
-  var row_permuted = Sudoku4x4()
-  for i in range(4):
-    for j in range(4):
-      var row = (i + 2) % 4 if rows else i
-      var col = (j + 2) % 4 if not rows else j
-      row_permuted.set(row, col, grid.get(i, j))
-  return row_permuted
-
 fn relabel(grid: Sudoku4x4, perm: List[Int]) -> Sudoku4x4:
   """
   Applies a permutation to the values (labels) in the Sudoku grid.
@@ -209,9 +146,9 @@ fn count() -> Dict[String, List[Sudoku4x4]]:
   
   for sudoku in counted_space.values():
     var sudoku_hash = String(sudoku)
-    if sudoku_hash in discovered_sudokus:
+    if sudoku_hash in discovered_sudokus: 
       continue
-    
+
     var bucket = List[Sudoku4x4]()
     bucket.append(sudoku)
     discovered_sudokus[String(sudoku)] = sudoku
@@ -223,48 +160,8 @@ fn count() -> Dict[String, List[Sudoku4x4]]:
       if relabelled_hash not in discovered_sudokus:
         discovered_sudokus[relabelled_hash] = relabelled
         bucket.append(relabelled)
-      var transposed = transpose(relabelled)
-      var transposed_hash = String(transposed)
-      if transposed_hash not in discovered_sudokus:
-        discovered_sudokus[transposed_hash] = transposed
-        bucket.append(transposed)
-
-      for isRows in [True, False]:
-        var permuted = permute(relabelled, rows=isRows)
-        var permuted_hash = String(permuted)
-        if permuted_hash not in discovered_sudokus:
-          discovered_sudokus[permuted_hash] = permuted
-          bucket.append(permuted)
-
-        var permuted_transposed = permute(transposed, rows=isRows)
-        var permuted_transposed_hash = String(permuted_transposed)
-        if permuted_transposed_hash not in discovered_sudokus:
-          discovered_sudokus[permuted_transposed_hash] = permuted_transposed
-          bucket.append(permuted_transposed)
-
-    var transposed = transpose(sudoku)
-    var transposed_hash = String(transposed)
-    if transposed_hash not in discovered_sudokus:
-      discovered_sudokus[transposed_hash] = transposed
-      bucket.append(transposed)
-
-    for isRows in [True, False]: 
-      var permuted = permute(sudoku, rows=isRows) 
-      var permuted_hash = String(permuted) 
-      if permuted_hash not in discovered_sudokus: 
-        discovered_sudokus[permuted_hash] = permuted 
-        bucket.append(permuted)
-
-      var permuted_transposed = permute(transposed, rows=isRows) 
-      var permuted_transposed_hash = String(permuted_transposed) 
-      if permuted_transposed_hash not in discovered_sudokus: 
-        discovered_sudokus[permuted_transposed_hash] = permuted_transposed 
-        bucket.append(permuted_transposed)
-
+    
     if len(bucket) > 0:
       canonical_buckets[sudoku_hash] = bucket
   
-  for bucket in canonical_buckets.values():
-    bucket[0].print_grid()
-
   return canonical_buckets

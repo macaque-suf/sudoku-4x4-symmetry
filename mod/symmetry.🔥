@@ -1,0 +1,142 @@
+from .models import Sudoku4x4
+
+fn can_place_digit_180(grid: Sudoku4x4, 
+                       row: Int,
+                       col: Int,
+                       digit: Int) -> Bool:
+  """Check if we can place a digit at (row, col) for 180° rotation"""
+  # Check row constraint
+  for c in range(4):
+    if grid.get(row, c) == digit:
+      return False
+
+  # Check column constraint
+  for r in range(4):
+    if grid.get(r, col) == digit:
+      return False
+
+  # Check box constraint
+  var box_row = row // 2
+  var box_col = col // 2
+  for i in range(2):
+    for j in range(2):
+      if grid.get(box_row * 2 + i, box_col * 2 + j) == digit:
+        return False
+      
+  return True
+
+fn backtrack_180(mut grid: Sudoku4x4,
+                 pos: Int,
+                 mut results: List[Sudoku4x4]) -> None:
+  """Backtracking for 180-degree rotational symmetry"""
+  # For 180° rotation, we need to fill half the grid
+  # We'll fill: top half (rows 0-1) = 8 positions
+  # The bottom half is determined by rotation
+  
+  if pos == 8:
+    # Fill the bottom half by 180° rotation
+    for i in range(2):
+      for j in range(4):
+        var rotated_val = grid.get(i, j)
+        grid.set(3-i, 3-j, rotated_val)
+    
+    # Check if the complete grid is valid
+    if grid.is_valid():
+      results.append(grid)
+      # Print the first few we find
+      if len(results) <= 3:
+        print("\nFound 180° symmetric Sudoku #", len(results), ":")
+        grid.print_grid()
+    return
+
+  # Map position index to (row, col)
+  var row = pos // 4
+  var col = pos % 4
+
+  # Try placing each digit 1-4
+  for digit in range(1, 5):
+    if can_place_digit_180(grid, row, col, digit):
+      grid.set(row, col, digit)
+      
+      # Check if rotated position needs the same digit
+      var rot_row = 3 - row
+      var rot_col = 3 - col
+      
+      # Temporarily place at rotated position to check constraints
+      var old_val = grid.get(rot_row, rot_col)
+      grid.set(rot_row, rot_col, digit)
+      
+      # Check if this creates a valid partial grid
+      var is_valid = True
+      
+      # Quick validity check for the rotated position
+      if rot_row < 2:  # Rotated position is in top half (shouldn't happen)
+        is_valid = False
+      else:
+        # Check constraints for rotated position
+        # Row check
+        for c in range(4):
+          if c != rot_col and grid.get(rot_row, c) == digit:
+            is_valid = False
+        # Column check  
+        for r in range(4):
+          if r != rot_row and grid.get(r, rot_col) == digit:
+            is_valid = False
+        # Box check
+        var box_r = rot_row // 2
+        var box_c = rot_col // 2
+        for i in range(2):
+          for j in range(2):
+            var check_r = box_r * 2 + i
+            var check_c = box_c * 2 + j
+            if (check_r != rot_row or check_c != rot_col) and grid.get(check_r, check_c) == digit:
+              is_valid = False
+      
+      if is_valid:
+        backtrack_180(grid, pos + 1, results)
+      
+      # Restore rotated position
+      grid.set(rot_row, rot_col, old_val)
+      grid.set(row, col, 0)  # backtrack
+
+fn generate_180_symmetric_sudokus() -> List[Sudoku4x4]:
+  """Generate all 180-degree rotationally symmetric 4x4 Sudokus"""
+  print("Generating 180° rotationally symmetric Sudokus...")
+  print("Filling top half (rows 0-1) = 8 positions")
+  print("Bottom half determined by rotation: (i,j) -> (3-i, 3-j)\n")
+  
+  var results = List[Sudoku4x4]()
+  var initial_grid = Sudoku4x4()
+  backtrack_180(initial_grid, 0, results)
+  
+  return results
+
+fn verify_180_symmetry():
+  """Verify the 180-degree rotation symmetry"""
+  var symmetric_grids = generate_180_symmetric_sudokus()
+  
+  print("\nTotal 180° symmetric Sudokus found: ", len(symmetric_grids))
+  
+  if len(symmetric_grids) > 0:
+    print("\n✓ VERIFIED: 180-degree rotation IS possible!")
+    print("These are valid 4x4 Sudokus with 180° rotational symmetry")
+    
+    # Verify the first one
+    if len(symmetric_grids) > 0:
+      print("\nVerifying symmetry of first example:")
+      var grid = symmetric_grids[0]
+      var is_symmetric = True
+      
+      for i in range(4):
+        for j in range(4):
+          var val = grid.get(i, j)
+          var rot_val = grid.get(3-i, 3-j)
+          if val != rot_val:
+            print("SYMMETRY BROKEN at (", i, ",", j, ")")
+            is_symmetric = False
+      
+      if is_symmetric:
+        print("✓ Symmetry verified!")
+  else:
+    print("\n✗ No 180° symmetric Sudokus found")
+    print("This would mean 180-degree rotation is also impossible")

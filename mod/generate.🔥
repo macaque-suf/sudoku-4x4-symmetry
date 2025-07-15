@@ -1,0 +1,175 @@
+from .models import Sudoku4x4
+
+var DEBUG = True
+var call_count = 0
+
+fn can_place_digit(grid: Sudoku4x4, 
+                   row: Int,
+                   col: Int,
+                   digit: Int) -> Bool:
+  """Helper function to check if we can place a digit at (row, col)"""
+  # Check row constraint
+  for c in range(4):
+    if grid.get(row, c) == digit:
+      if DEBUG and call_count < 100:
+        print("  Row conflict: digit ", digit, " already in row ", row)
+      return False
+
+  # Check column constraint
+  for r in range(4):
+    if grid.get(r, col) == digit:
+      if DEBUG and call_count < 100:
+        print("  Col conflict: digit ", digit, " already in col ", col)
+      return False
+
+  # Check box constraint
+  var box_row = row // 2
+  var box_col = col // 2
+  for i in range(2):
+    for j in range(2):
+      if grid.get(box_row * 2 + i, box_col * 2 + j) == digit:
+        if DEBUG and call_count < 100:
+          print("  Box conflict: digit ", digit, " already in box (", box_row, ",", box_col, ")")
+        return False
+      
+  return True
+
+fn print_partial_grid(grid: Sudoku4x4):
+  """Print grid showing 0s as dots for clarity"""
+  for i in range(4):
+    for j in range(4):
+      var val = grid.get(i, j)
+      if val == 0:
+        print(".", " ", end="")
+      else:
+        print(val, " ", end="")
+    print()
+
+fn backtrack(mut grid: Sudoku4x4,
+             pos: Int,
+             mut results: List[Sudoku4x4]) -> None:
+  """Backtracking function."""
+  call_count += 1
+  
+  if DEBUG and call_count < 100:
+    print("\n--- Backtrack called with pos=", pos, " ---")
+    print("Current grid state:")
+    print_partial_grid(grid)
+
+  if pos == 10:
+    # We've filled all independent positions
+    # Fill lower triangle by symmetry
+    for i in range(4):
+      for j in range(i):
+        grid.set(i, j, grid.get(j, i))
+
+    if DEBUG:
+      print("\nCompleted grid (after filling by symmetry):")
+      print_partial_grid(grid)
+      print("Is valid: ", grid.is_valid())
+    
+    # Check if the complete grid is valid
+    if grid.is_valid():
+      results.append(grid)
+      print("\nFOUND VALID SYMMETRIC SUDOKU #", len(results))
+    return
+
+  # Map position index to (row, col)
+  var row: Int
+  var col: Int
+  
+  if pos == 0:
+    row = 0
+    col = 0
+  elif pos == 1:
+    row = 0
+    col = 1
+  elif pos == 2:
+    row = 0
+    col = 2
+  elif pos == 3:
+    row = 0
+    col = 3
+  elif pos == 4:
+    row = 1
+    col = 1
+  elif pos == 5:
+    row = 1
+    col = 2
+  elif pos == 6:
+    row = 1
+    col = 3
+  elif pos == 7:
+    row = 2
+    col = 2
+  elif pos == 8:
+    row = 2
+    col = 3
+  else:  # pos == 9
+    row = 3
+    col = 3
+
+  if DEBUG and call_count < 100:
+    print("Position ", pos, " maps to (", row, ",", col, ")")
+
+  # Try placing each digit 1-4
+  for digit in range(1, 5):
+    if DEBUG and call_count < 100:
+      print("\nTrying digit ", digit, " at (", row, ",", col, ")")
+    
+    if row == col:
+      # Diagonal position - only need to place once
+      if can_place_digit(grid, row, col, digit):
+        if DEBUG and call_count < 100:
+          print("  Placing ", digit, " at diagonal position (", row, ",", col, ")")
+        grid.set(row, col, digit)
+        backtrack(grid, pos + 1, results)
+        grid.set(row, col, 0)  # backtrack
+      else:
+        if DEBUG and call_count < 100:
+          print("  Cannot place ", digit, " at (", row, ",", col, ")")
+    else:
+      # Off-diagonal position (upper triangle)
+      # We need to check BEFORE placing in both positions
+      if DEBUG and call_count < 100:
+        print("  Checking off-diagonal placement...")
+        print("  Need to place at both (", row, ",", col, ") and (", col, ",", row, ")")
+      
+      # Check if we can place in the first position
+      var can_place_first = can_place_digit(grid, row, col, digit)
+      if can_place_first:
+        # Temporarily place in first position to check second
+        grid.set(row, col, digit)
+        var can_place_second = can_place_digit(grid, col, row, digit)
+        
+        if can_place_second:
+          # Place in both positions
+          grid.set(col, row, digit)
+          if DEBUG and call_count < 100:
+            print("  Placed ", digit, " at both positions")
+          
+          backtrack(grid, pos + 1, results)
+          
+          # backtrack both
+          grid.set(col, row, 0)
+        else:
+          if DEBUG and call_count < 100:
+            print("  Cannot place at symmetric position")
+        
+        # backtrack first position
+        grid.set(row, col, 0)
+
+fn generate_symmetric_sudokus() -> List[Sudoku4x4]:
+  """Generate all transpose-symmetric 4x4 Sudokus."""
+  print("Starting symmetric sudoku generation...")
+  var results = List[Sudoku4x4]()
+  var initial_grid = Sudoku4x4()
+  
+  # Reset call count for debugging
+  call_count = 0
+  
+  backtrack(initial_grid, 0, results)
+  
+  print("\nTotal backtrack calls: ", call_count)
+  
+  return results

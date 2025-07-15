@@ -1,0 +1,112 @@
+from .models import Sudoku4x4
+from .symmetry import generate_180_symmetric_sudokus
+from .pattern_counter import grid_to_canonical_form, grids_equal
+
+fn find_digit_mapping(g1: Sudoku4x4, g2: Sudoku4x4) -> SIMD[DType.int8, 8]:
+  """Find the digit mapping that transforms g1 into g2, if it exists"""
+  var mapping = SIMD[DType.int8, 8](-1)  # -1 means unmapped
+  
+  # Try to deduce the mapping by looking at positions
+  for i in range(16):
+    var digit1 = Int(g1.grid[i])
+    var digit2 = Int(g2.grid[i])
+    
+    if digit1 > 0 and digit2 > 0:
+      if mapping[digit1] == -1:
+        mapping[digit1] = digit2
+      elif mapping[digit1] != digit2:
+        # Inconsistent mapping
+        return SIMD[DType.int8, 8](-1)
+  
+  return mapping
+
+fn verify_single_pattern():
+  """Verify that all 180° symmetric grids share the same pattern"""
+  print("\n=== VERIFYING SINGLE PATTERN RESULT ===\n")
+  
+  var symmetric_grids = generate_180_symmetric_sudokus()
+  
+  # Take the first grid as reference
+  var reference = symmetric_grids[0]
+  print("Reference grid (Grid #1):")
+  reference.print_grid()
+  
+  print("Checking that all other grids are relabelings of this one...\n")
+  
+  # Check a few examples
+  for i in range(1, min(5, len(symmetric_grids))):
+    print("Grid #", i + 1, ":")
+    var grid = symmetric_grids[i]
+    grid.print_grid()
+    
+    # Find the mapping
+    var mapping = find_digit_mapping(reference, grid)
+    
+    print("Digit mapping from reference: ", end="")
+    for d in range(1, 5):
+      if mapping[d] > 0:
+        print(d, "→", Int(mapping[d]), " ", end="")
+    print("\n")
+  
+  # Verify all grids have same canonical form
+  print("Verifying all grids have the same canonical form...")
+  var first_canonical = grid_to_canonical_form(symmetric_grids[0])
+  var all_same = True
+  
+  for i in range(1, len(symmetric_grids)):
+    var canonical = grid_to_canonical_form(symmetric_grids[i])
+    if not grids_equal(first_canonical, canonical):
+      all_same = False
+      print("ERROR: Grid ", i + 1, " has different canonical form!")
+      break
+  
+  if all_same:
+    print("✓ Confirmed: All 24 grids have the same canonical form!")
+    print("\nThis means there is exactly ONE fundamental pattern")
+    print("for 180° rotationally symmetric 4×4 Sudoku.")
+    print("\nThe 24 different grids are the 24 ways to label")
+    print("this pattern with digits 1, 2, 3, 4.")
+
+fn analyze_pattern_structure():
+  """Analyze the structure of the unique pattern"""
+  print("\n=== ANALYZING THE UNIQUE PATTERN ===\n")
+  
+  var grids = generate_180_symmetric_sudokus()
+  var canonical = grid_to_canonical_form(grids[0])
+  
+  print("The canonical form of the unique pattern:")
+  canonical.print_grid()
+  
+  print("\nStructural properties:")
+  
+  # Check diagonal
+  print("Main diagonal: ", end="")
+  for i in range(4):
+    print(canonical.get(i, i), " ", end="")
+  print()
+  
+  print("Anti-diagonal: ", end="")
+  for i in range(4):
+    print(canonical.get(i, 3-i), " ", end="")
+  print()
+  
+  # Check if it has any other symmetries
+  print("\nChecking for additional symmetries...")
+  
+  # Check horizontal reflection
+  var h_symmetric = True
+  for i in range(2):
+    for j in range(4):
+      if canonical.get(i, j) != canonical.get(3-i, j):
+        h_symmetric = False
+  print("Horizontal reflection symmetric: ", h_symmetric)
+  
+  # Check vertical reflection
+  var v_symmetric = True
+  for i in range(4):
+    for j in range(2):
+      if canonical.get(i, j) != canonical.get(i, 3-j):
+        v_symmetric = False
+  print("Vertical reflection symmetric: ", v_symmetric)
+
+

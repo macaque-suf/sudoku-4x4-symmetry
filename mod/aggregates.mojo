@@ -1,4 +1,4 @@
-from .models import Sudoku4x4
+from .models.sudoku import Sudoku4x4
 
 fn hash(a: Int, b: Int, c: Int, d: Int) -> Int:
   return a * 1000 + b * 100 + c * 10 + d
